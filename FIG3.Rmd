@@ -1,0 +1,79 @@
+---
+title: "Fig. 3"
+output: html_notebook
+---
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(ggmap)
+library(gridExtra)
+library(reshape2)
+```
+
+```{r}
+d <- read.csv("https://raw.githubusercontent.com/dirkseidensticker/aDRAC/master/data/aDRAC.csv")
+
+# filter rough bounding box
+d <- filter(d, LAT < 10 & LAT > -10 & LONG > 5 & LONG < 22)
+
+# clean MATERIAL
+# only differntiate between 'Pennisetum glaucum', 'Elaeis guineensis' and others
+d$MATERIAL <- as.character(d$MATERIAL)
+d$MATERIAL[!d$MATERIAL == "Pennisetum glaucum" & !d$MATERIAL == "Elaeis guineensis"] = "Other material"
+
+# pivot on MATERIAL
+d.piv <- dcast(d, LAT + LONG ~ MATERIAL)
+d.piv
+```
+
+# Map
+
+```{r}
+map <- get_map(location = c(15, 0), zoom = 6, maptype = "hybrid")
+p1 <- ggmap(map) + 
+  geom_point(data = subset(d.piv, d.piv[,'Other material'] != 0), aes(x = LONG, y = LAT), shape = 21, fill = 'black', size = 3, color = "white") + 
+  geom_point(data = subset(d.piv, d.piv[,'Elaeis guineensis'] != 0), aes(x = LONG, y = LAT), shape = 21, fill = 'orange', size = 3, color = "white") + 
+  geom_point(data = subset(d.piv, d.piv[,'Pennisetum glaucum'] != 0), aes(x = LONG, y = LAT), shape = 21, fill = 'red', size = 3, color = "white") + 
+  geom_point(aes(x = 9.401703, y = 4.661158), shape = 23, size = 3, fill = 'yellow')
+```
+
+# OxCal
+
+```{r}
+library(oxcAAR)
+quickSetupOxcal()
+#setOxcalExecutablePath("OxCal")
+my_dates <- R_Date(d$LABNR, d$C14AGE, d$C14STD)
+my_sum <- oxcal_Sum(my_dates)
+
+write(my_sum, file = "ToOxCal.txt")
+```
+
+> run in OxCal an Export "Raw data"
+
+```{r}
+sum <- read.table(file = "FromOxCal.prior")
+
+p2 <- ggplot(sum, aes(x = V1, y = V2)) + 
+  annotate("rect", xmin = (1950-2020), xmax = (1950-2600), ymin = 0, ymax = .55, fill = 'orange') + 
+  annotate("text", x = -1700, y = .45, label = "Lake Barombi\nLHRC") + 
+  geom_area() + 
+  scale_x_reverse("Age (cal y BC/AD)", limits = c(2000, -10000)) +
+  scale_y_continuous("Probability density") + 
+  theme_bw() + 
+  theme(panel.grid.major.x = element_blank(), 
+        panel.grid.minor.x = element_blank(),
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank())
+```
+
+# Figure
+
+
+```{r}
+p <- plot_grid(p1, p2, labels = "AUTO", ncol = 1, align = "v", rel_widths = c(1, 1), rel_heights = c(3, 1))
+ggsave("Fig3rev.pdf", p, width = 10, height = 13)
+p
+```
+
