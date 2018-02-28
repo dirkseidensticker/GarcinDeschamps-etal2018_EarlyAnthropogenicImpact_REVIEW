@@ -4,10 +4,11 @@ output: html_notebook
 ---
 
 ```{r}
+library(cowplot)
 library(dplyr)
 library(ggplot2)
 library(ggmap)
-library(gridExtra)
+library(ggthemes)
 library(reshape2)
 ```
 
@@ -30,12 +31,59 @@ d.piv
 # Map
 
 ```{r}
-map <- get_map(location = c(15, 0), zoom = 6, maptype = "hybrid")
-p1 <- ggmap(map) + 
+library(raster)
+library(rgdal)
+library(sp)
+
+epsg <- 4326
+crs <- paste("+init=epsg:",epsg,"", sep="")
+
+cnt <- spTransform(readOGR(dsn = "data/vector", layer="10m_admin_0_countries", verbose = FALSE), CRS( crs))
+rvr <- spTransform(readOGR(dsn = "data/vector", layer="10m_rivers_lake_centerlines", verbose = FALSE), CRS(crs))
+
+# raster layer with rainforest cover from bioval.jrc.ec.europa.eu
+dpath <- "data/raster/bioval.jrc.ec.europa.eu/hdr.adf"
+x <- new("GDALReadOnlyDataset", dpath)
+getDriver(x)
+getDriverLongName(getDriver(x))
+
+hdr <- asSGDF_GROD(x)
+hdr <- raster(hdr)
+
+# extent format (xmin,xmax,ymin,ymax)
+e  <- extent(6, 23, -8.5, 8.5) 
+rfs <- crop(hdr, e) 
+
+# convert the raster to points for plotting
+rfs.p <- rasterToPoints(rfs)
+
+# Make the points a dataframe for ggplot & subset rainforest bands 1-7
+rfs.d <- data.frame(rfs.p)
+rfs.d <- subset(rfs.d, band1 >= 1 & band1 <= 7)
+```
+
+```{r}
+p1 <- ggplot() + 
+  geom_polygon(data = cnt, 
+              aes(long, lat, group = group, fill=hole),
+              size = 0.2, 
+              fill  = "#ffebbe",  
+              color = "black") + 
+  geom_raster(data = rfs.d, aes(y = y, x = x), fill = '#00734d') + 
+  geom_path(data = rvr, 
+            aes(long, lat, group = group, fill=NULL),
+            size = 0.5,   
+            colour  = "#44afe3") + 
+  coord_equal(xlim=c(7, 22),
+              ylim=c(-7.5,7.5)) + 
   geom_point(data = subset(d.piv, d.piv[,'Other material'] != 0), aes(x = LONG, y = LAT), shape = 21, fill = 'black', size = 3, color = "white") + 
   geom_point(data = subset(d.piv, d.piv[,'Elaeis guineensis'] != 0), aes(x = LONG, y = LAT), shape = 21, fill = 'orange', size = 3, color = "white") + 
   geom_point(data = subset(d.piv, d.piv[,'Pennisetum glaucum'] != 0), aes(x = LONG, y = LAT), shape = 21, fill = 'red', size = 3, color = "white") + 
-  geom_point(aes(x = 9.401703, y = 4.661158), shape = 23, size = 3, fill = 'yellow')
+  geom_point(aes(x = 9.401703, y = 4.661158), shape = 23, size = 3, fill = 'yellow') + 
+  theme_few() + 
+  theme(
+    panel.background = element_rect(fill = "#dff1f9")
+  )
 ```
 
 # OxCal
@@ -47,13 +95,13 @@ quickSetupOxcal()
 my_dates <- R_Date(d$LABNR, d$C14AGE, d$C14STD)
 my_sum <- oxcal_Sum(my_dates)
 
-write(my_sum, file = "ToOxCal.txt")
+write(my_sum, file = "data/processed/ToOxCal.txt")
 ```
 
 > run in OxCal an Export "Raw data"
 
 ```{r}
-sum <- read.table(file = "FromOxCal.prior")
+sum <- read.table(file = "data/processed/FromOxCal.prior")
 
 p2 <- ggplot(sum, aes(x = V1, y = V2)) + 
   annotate("rect", xmin = (1950-2020), xmax = (1950-2600), ymin = 0, ymax = .55, fill = 'orange') + 
