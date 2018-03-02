@@ -8,6 +8,7 @@ library(cowplot)
 library(dplyr)
 library(ggplot2)
 library(ggmap)
+library(ggsn)
 library(ggthemes)
 library(reshape2)
 ```
@@ -141,7 +142,7 @@ d.r.piv
 ```
 
 ```{r}
-ggplot() + 
+g1 <- ggplot() + 
   geom_polygon(data = cnt, 
               aes(long, lat, group = group, fill=hole),
               fill  = "#ffebbe") + 
@@ -161,11 +162,43 @@ ggplot() +
   geom_point(data = subset(d.r.piv, d.r.piv[,'Elaeis guineensis'] != 0), aes(x = LONG, y = LAT), shape = 21, fill = 'orange', size = 3, color = "white") + 
   geom_point(data = subset(d.r.piv, d.r.piv[,'Pennisetum glaucum'] != 0), aes(x = LONG, y = LAT), shape = 21, fill = 'red', size = 3, color = "white") + 
   geom_point(aes(x = 9.401703, y = 4.661158), shape = 23, size = 3, fill = 'yellow') + 
+  scalebar(location = "bottomright", dist = 250, height = 0.2,
+           dd2km = TRUE, model = 'WGS84',           
+           x.min = 15, x.max = 22,
+           y.min = -7, y.max = -6, 
+           st.dist = .4, st.size = 4) +
   theme_few() + 
   theme(
     panel.background = element_rect(fill = "#dff1f9")
   )
-ggsave("output/Fig3rev_aDRAC_3000-2000bp.pdf", width = 6, height = 6)
+
+# the minimap:
+csl <- spTransform(readOGR(dsn = "data/vector", layer="ne_110m_land", verbose = FALSE), CRS( crs))
+
+g2 <- ggplotGrob(
+  ggplot() + 
+  geom_polygon(data = csl, 
+               aes(long, lat, group = group),
+               size = 0.2, 
+               fill = 'white', color = "black") + 
+  geom_rect(mapping = aes(xmin = 7, xmax = 22, 
+                          ymin = -7.5, ymax = 7.5), 
+            alpha = 0.5, fill ="black", size = 0.5) + 
+  coord_equal() + 
+  scale_x_continuous(limits = c(-20, 55), expand = c(0, 0)) + 
+  scale_y_continuous(limits = c(-40, 42), expand = c(0, 0)) + 
+  theme_map() + 
+  theme(panel.background = element_rect(fill = 'white'), 
+        panel.border = element_rect(colour  = 'black', fill = NA, size = 1))
+)
+
+g3 <- g1 + 
+  annotation_custom(grob = g2, 
+                    xmin = 6, xmax = 10,
+                    ymin = -8, ymax = -4)
+g3
+ggsave(g3, filename = "output/Fig3rev_aDRAC_3000-2000bp.pdf", 
+       width = 6, height = 6)
 ```
 
 # Orginal Dataset
