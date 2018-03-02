@@ -12,6 +12,8 @@ library(ggthemes)
 library(reshape2)
 ```
 
+# aDRAC
+
 ```{r}
 d <- read.csv("https://raw.githubusercontent.com/dirkseidensticker/aDRAC/master/data/aDRAC.csv")
 
@@ -28,7 +30,7 @@ d.piv <- dcast(d, LAT + LONG ~ MATERIAL)
 d.piv
 ```
 
-# Map
+## Map
 
 ```{r}
 library(raster)
@@ -66,10 +68,13 @@ rfs.d <- subset(rfs.d, band1 >= 1 & band1 <= 7)
 p1 <- ggplot() + 
   geom_polygon(data = cnt, 
               aes(long, lat, group = group, fill=hole),
-              size = 0.2, 
-              fill  = "#ffebbe",  
-              color = "black") + 
+              fill  = "#ffebbe") + 
   geom_raster(data = rfs.d, aes(y = y, x = x), fill = '#00734d') + 
+  geom_polygon(data = cnt, 
+              aes(long, lat, group = group),
+              size = 0.2, 
+              fill  = NA,  
+              color = "black") + 
   geom_path(data = rvr, 
             aes(long, lat, group = group, fill=NULL),
             size = 0.5,   
@@ -86,7 +91,7 @@ p1 <- ggplot() +
   )
 ```
 
-# OxCal
+## OxCal
 
 ```{r}
 library(oxcAAR)
@@ -116,12 +121,61 @@ p2 <- ggplot(sum, aes(x = V1, y = V2)) +
         panel.grid.minor.y = element_blank())
 ```
 
-# Figure
+## Figure
 
 
 ```{r}
 p <- plot_grid(p1, p2, labels = "AUTO", ncol = 1, align = "v", rel_widths = c(1, 1), rel_heights = c(3, 1))
-ggsave("Fig3rev.pdf", p, width = 10, height = 13)
+ggsave("output/Fig3rev_aDRAC.pdf", p, width = 10, height = 13)
 p
 ```
+
+## Map only site with dates between 3000-2000 bp (roughly the time of the LHRC)
+
+```{r}
+d.r <- filter(d, C14AGE < 3000 & C14AGE > 2000)
+
+# pivot on MATERIAL
+d.r.piv <- dcast(d.r, LAT + LONG ~ MATERIAL)
+d.r.piv
+```
+
+```{r}
+ggplot() + 
+  geom_polygon(data = cnt, 
+              aes(long, lat, group = group, fill=hole),
+              fill  = "#ffebbe") + 
+  geom_raster(data = rfs.d, aes(y = y, x = x), fill = '#00734d') + 
+  geom_polygon(data = cnt, 
+              aes(long, lat, group = group),
+              size = 0.2, 
+              fill  = NA,  
+              color = "black") + 
+  geom_path(data = rvr, 
+            aes(long, lat, group = group, fill=NULL),
+            size = 0.5,   
+            colour  = "#44afe3") + 
+  coord_equal(xlim=c(7, 22),
+              ylim=c(-7.5,7.5)) + 
+  geom_point(data = subset(d.r.piv, d.r.piv[,'Other material'] != 0), aes(x = LONG, y = LAT), shape = 21, fill = 'black', size = 3, color = "white") + 
+  geom_point(data = subset(d.r.piv, d.r.piv[,'Elaeis guineensis'] != 0), aes(x = LONG, y = LAT), shape = 21, fill = 'orange', size = 3, color = "white") + 
+  geom_point(data = subset(d.r.piv, d.r.piv[,'Pennisetum glaucum'] != 0), aes(x = LONG, y = LAT), shape = 21, fill = 'red', size = 3, color = "white") + 
+  geom_point(aes(x = 9.401703, y = 4.661158), shape = 23, size = 3, fill = 'yellow') + 
+  theme_few() + 
+  theme(
+    panel.background = element_rect(fill = "#dff1f9")
+  )
+ggsave("output/Fig3rev_aDRAC_3000-2000bp.pdf", width = 6, height = 6)
+```
+
+# Orginal Dataset
+
+```{r}
+library(readxl)
+
+s <- read_excel("data/base/pnas.1715336115.sd01.xlsx", 
+                skip = 1)
+s
+```
+
 
