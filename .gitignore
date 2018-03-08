@@ -36,3 +36,6 @@ vignettes/*.pdf
 
 OxCal/
 .Rproj.user
+
+# for now, remove the output folder
+output/
