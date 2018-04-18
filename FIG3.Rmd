@@ -10,8 +10,8 @@ library(cowplot)
 library(dplyr)
 library(ggplot2)
 library(ggmap)
-#library(devtools)
-#install_github("oswaldosantos/ggsn")
+library(devtools)
+install_github("oswaldosantos/ggsn")
 library(ggsn)
 library(ggthemes)
 library(raster)
@@ -447,6 +447,35 @@ p <- plot_grid(p1, p2, labels = "AUTO", ncol = 1, align = "v", rel_widths = c(1,
 ggsave("output/Fig3rev_aDRAC.pdf", p, width = 10, height = 13)
 p
 ```
+
+
+```{r}
+ggplot(sum, aes(x = V1, y = V2)) + 
+  annotate("rect", xmin = (-20), xmax = (-600), ymin = .55, ymax = .65, fill = 'orange') + 
+  annotate("text", x = ((-20+-600)/2), y = .6, label = "LHRC", color = "white", fontface = 2) + 
+  annotate("rect", xmin = (536), xmax = (660), ymin = .55, ymax = .65, fill = 'cornflowerblue') + 
+  annotate("text", x = ((536+660)/2), y = .53, label = "LALIA") + 
+  annotate("rect", xmin = (700), xmax = (1100), ymin = .55, ymax = .65, fill = 'red') + 
+  annotate("text", x = ((700+1100)/2), y = .6, label = "MWP", color = "white", fontface = 2) + 
+  annotate("rect", xmin = (1250), xmax = (1850), ymin = .55, ymax = .65, fill = 'blue') + 
+  annotate("text", x = ((1250+1850)/2), y = .6, label = "LIA", color = "white", fontface = 2) + 
+  geom_area() + 
+  scale_x_continuous("v. Chr. / n. Chr.", 
+                     limits = c(-4000, 2000),
+                     breaks = seq(-4000, 2000, by = 1000), 
+                     labels = seq(4000, -2000, by = -1000), 
+                     expand=c(0,0)) + 
+  scale_y_continuous("Probability density",
+                     expand=c(0,0)) + 
+  theme_bw() + 
+  theme(panel.grid.major.x = element_blank(), 
+        panel.grid.minor.x = element_blank(),
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank())
+ggsave("output/aDRAC-OxCal_4000-0bp.pdf", 
+       width = 6, height = 2)
+```
+
 
 ## Map only site with dates between 3000-2000 bp (roughly the time of the LHRC)
 
